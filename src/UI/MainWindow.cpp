@@ -1,18 +1,22 @@
-#include "../include/mainwindow.h"
-#include "../../drawing_logic/include/canvaswidget.h"
-#include "../../drawing_logic/include/drawer.h"
+﻿#include <QAction>
 #include <QColorDialog>
+#include <QFileDialog>
+#include <QMenu>
 #include <QSpinBox>
-#include <QAction>
 #include <QToolBar>
 #include <QToolButton>
-#include <QMenu>
+#include <QMessageBox>
 
-MainWindow::MainWindow(QWidget *parent)
+#include <DrawingLogic/CanvasWidget.h>
+#include <DrawingLogic/Drawer.h>
+#include <UI/MainWindow.h>
+#include <io/Serialization/Serialization.h>
+
+MainWindow::MainWindow(QWidget *parent,const QString& clientId)
     : QMainWindow(parent)
 {
     setWindowTitle("Whiteboard");
-    canvas = new CanvasWidget(this);
+    canvas = new CanvasWidget(this, clientId);
     setCentralWidget(canvas);
     setup_toolbar();
 }
@@ -23,7 +27,7 @@ void MainWindow::setup_toolbar() {
     toolbar = addToolBar("Tools");
     toolbar->setMovable(false);
 
-    toolbar->addWidget(setup_edit_button());
+    toolbar->addWidget(setup_file_button());
     toolbar->addWidget(setup_tools_button());
 
     auto* color_action = new QAction("Color", this);
@@ -41,21 +45,21 @@ void MainWindow::setup_toolbar() {
     toolbar->addWidget(thickness_spin);
 }
 
-QToolButton* MainWindow::setup_edit_button() {
-    auto* edit_button = new QToolButton(this);
-    edit_button->setText("Edit");
-    edit_button->setPopupMode(QToolButton::InstantPopup);
+QToolButton* MainWindow::setup_file_button() {
+    auto* file_button = new QToolButton(this);
+    file_button->setText("File");
+    file_button->setPopupMode(QToolButton::InstantPopup);
 
-    QMenu *edit_menu = new QMenu(edit_button);
+    QMenu* file_menu = new QMenu(file_button);
 
-    QAction *serialize_action = edit_menu->addAction("Save as...");
-    QAction *deserialize_action = edit_menu->addAction("Load from file");
+    QAction* save_as_action = file_menu->addAction("Save as...");
+    QAction* upload_action = file_menu->addAction("Upload");
 
-    connect(serialize_action, &QAction::triggered, this, &MainWindow::serialize);
-    connect(deserialize_action, &QAction::triggered, this, &MainWindow::deserialize);
+    connect(save_as_action, &QAction::triggered, this, &MainWindow::save_as);
+    connect(upload_action, &QAction::triggered, this, &MainWindow::upload);
 
-    edit_button->setMenu(edit_menu);
-    return edit_button;
+    file_button->setMenu(file_menu);
+    return file_button;
 }
 
 QToolButton* MainWindow::setup_tools_button() {
@@ -79,6 +83,44 @@ QToolButton* MainWindow::setup_tools_button() {
     tool_button->setMenu(tool_menu);
     return tool_button;
 }
+
+void MainWindow::save_as() {
+    QString filename = QFileDialog::getSaveFileName(
+        this,
+        "Save Whiteboard",
+        "",
+        "Whiteboard Files (*.wb);;All Files (*)"
+    );
+
+    if (!filename.isEmpty()) {
+        if (CanvasSerializer::serialize(canvas, filename)) {
+            QMessageBox::information(this, "Success", "File saved successfully");
+        }
+        else {
+            QMessageBox::warning(this, "Error", "Failed to save file");
+        }
+    }
+}
+
+void MainWindow::upload() {
+    QString filename = QFileDialog::getOpenFileName(
+        this,
+        "Load Whiteboard",
+        "",
+        "Whiteboard Files (*.wb);;All Files (*)"
+    );
+
+    if (!filename.isEmpty()) {
+        if (CanvasSerializer::deserialize(canvas, filename)) {
+            QMessageBox::information(this, "Success", "File loaded successfully");
+            canvas->update();
+        }
+        else {
+            QMessageBox::warning(this, "Error", "Failed to load file");
+        }
+    }
+}
+
 
 void MainWindow::select() {
     auto tool = std::make_unique<MoveTool>();

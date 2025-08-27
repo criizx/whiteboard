@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
-#include <QPointF>
 #include <memory>
+#include <QPointF>
 #include <utility>
 #include <vector>
-#include "DrawableObject.h"
+
+#include <DrawingLogic/DrawableObject.h>
 
 class CanvasWidget;
 class DrawableObject;
@@ -39,7 +40,7 @@ public:
     void on_mouse_release(CanvasWidget* canvas, QPointF pos) override;
 
 private:
-    std::vector<QPointF> m_points;
+    QVector<QPointF> m_points;
     bool m_drawing = false;
 	std::shared_ptr<DrawableBrokenLine> preview_path;
 

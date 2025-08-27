@@ -1,8 +1,8 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
 #include <QColor>
+#include <QMainWindow>
 #include <QToolButton>
 
 class CanvasWidget;
@@ -15,13 +15,16 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 
 public:
-	explicit MainWindow(QWidget *parent = nullptr);
+	explicit MainWindow(QWidget* parent = nullptr, const QString& clientId = QString());
 	~MainWindow() override;
 
+	[[nodiscard]] CanvasWidget* getCanvas() {
+		return canvas;
+	}
+
 private slots:
-	void edit(){};
-	void serialize(){};
-	void deserialize(){};
+	void save_as();
+	void upload();
 
 	void select();
 	void choose_color();
@@ -38,7 +41,7 @@ private:
 	QColor current_color = Qt::black;
 	int current_thickness = 2;
 
-	QToolButton* setup_edit_button();
+	QToolButton* setup_file_button();
 	QToolButton* setup_tools_button();
 	void setup_toolbar();
 };

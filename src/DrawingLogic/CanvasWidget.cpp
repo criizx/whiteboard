@@ -1,22 +1,19 @@
-#include "../include/canvaswidget.h"
-#include "../include/drawer.h"
-#include <QPainter>
-#include <QMouseEvent>
+﻿#include <cmath>
 #include <QDebug>
-#include <cmath>
+#include <QMouseEvent>
+#include <QPainter>
+#include <unordered_map>
 
+#include <DrawingLogic/CanvasWidget.h>
+#include <DrawingLogic/Drawer.h>
 
-CanvasWidget::CanvasWidget(QWidget* parent)
-	: QWidget(parent) {
+CanvasWidget::CanvasWidget(QWidget* parent, const QString& UserId)
+	: QWidget(parent), m_userId(UserId) {
 	setMouseTracking(true);
 	create_drawer_by_name("line");
 }
 
 const std::vector<std::shared_ptr<DrawableObject>>& CanvasWidget::objects() const {
-	return m_objects;
-}
-
-std::vector<std::shared_ptr<DrawableObject>>& CanvasWidget::objects() {
 	return m_objects;
 }
 
@@ -62,6 +59,7 @@ void CanvasWidget::create_drawer_by_name(const QString& name) {
 void CanvasWidget::clear_all() {
 	m_objects.clear();
 	update();
+	emit allObjectsDeleted();
 }
 
 void CanvasWidget::paintEvent(QPaintEvent*) {
@@ -75,6 +73,17 @@ void CanvasWidget::paintEvent(QPaintEvent*) {
 
 	for (const auto& obj : m_objects) {
 		obj->draw(painter);
+	}
+
+	for (const auto& [id, preview] : m_previews) {
+		if (preview) {
+			preview->draw(painter);
+		}
+	}
+
+	if (m_tool_preview)
+	{
+		m_tool_preview->draw(painter);
 	}
 }
 
@@ -118,8 +127,9 @@ void CanvasWidget::mouseReleaseEvent(QMouseEvent* event) {
 	}
 }
 
-int CanvasWidget::generate_id() {
-	return m_next_id++;
+QString CanvasWidget::generate_id() {
+	m_next_id++;
+	return m_userId + "-" + QString::number(m_next_id);
 }
 
 QPointF CanvasWidget::to_world(const QPointF& screen_pos) const {
@@ -131,7 +141,7 @@ QPointF CanvasWidget::to_screen(const QPointF& world_pos) const {
 }
 
 void CanvasWidget::wheelEvent(QWheelEvent* event) {
-	const QPointF cursor_pos = event->pos();
+	const QPointF cursor_pos = event->position();
 	const QPointF before_scale = to_world(cursor_pos);
 
 	const qreal scale_factor = std::pow(1.0015, event->angleDelta().y());
@@ -141,4 +151,40 @@ void CanvasWidget::wheelEvent(QWheelEvent* event) {
 	m_offset += (after_scale - before_scale) * m_scale;
 
 	update();
+}
+
+void CanvasWidget::setPreview(QString UserId, std::shared_ptr<DrawableObject> preview){
+	m_previews[UserId] = preview;
+}
+void CanvasWidget::clearPreview(QString UserId) {
+	m_previews.erase(UserId);
+}
+
+void CanvasWidget::clearAllPreviews(){
+	m_previews.clear();
+}
+
+void CanvasWidget::setToolPreview(std::shared_ptr<DrawableObject> preview) {
+	m_tool_preview = preview;
+}
+
+void CanvasWidget::clearToolPreview() {
+	m_tool_preview = nullptr;
+}
+
+void CanvasWidget::addObject(std::shared_ptr<DrawableObject> obj) {
+	m_objects.push_back(obj);
+
+	emit objectCreated(obj);
+}
+
+bool CanvasWidget::remove_object(const std::shared_ptr<DrawableObject>& object) {
+	auto it = std::find(m_objects.begin(), m_objects.end(), object);
+
+	if (it != m_objects.end()) {
+		m_objects.erase(it);
+		emit objectDeleted(object);
+		return true;
+	}
+	return false;
 }

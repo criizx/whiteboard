@@ -1,2 +1,8 @@
  cmake-build-debug/
 .idea/
+./out
+
+CMakePresets.json
+CmakeUserPresets.json
+/.vs
+/out/build/debug

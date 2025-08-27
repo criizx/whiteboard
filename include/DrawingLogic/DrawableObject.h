@@ -1,28 +1,33 @@
-#pragma once
+﻿#pragma once
 
-#include <QPointF>
-#include <QPainterPath>
-#include <QPainter>
-#include <QColor>
-#include <QBrush>
 #include <memory>
+#include <QBrush>
+#include <QColor>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPointF>
+#include <QJsonObject>
 #include <utility>
 #include <vector>
+#include <QByteArray>
+
+#include <Shared/Shared.h>
+
 
 class DrawableObject {
 protected:
-    int id;
+    QString id;
     int thickness;
     QColor color;
     QBrush fill;
 
 public:
-    explicit DrawableObject(const int id_, const int thickness_ = 3, QColor color_ = Qt::black, const QBrush& fill_ = Qt::NoBrush)
+    explicit DrawableObject(const QString id_, const int thickness_ = 3, QColor color_ = Qt::black, const QBrush& fill_ = Qt::NoBrush)
         : id(id_), thickness(thickness_), color(std::move(color_)), fill(fill_) {}
 
     virtual ~DrawableObject() = default;
 
-    [[nodiscard]] int get_id() const { return id; }
+    [[nodiscard]] QString get_id() const { return id; }
     [[nodiscard]] int get_thickness() const { return thickness; }
     void set_thickness(const int t) { thickness = t; }
 
@@ -37,13 +42,23 @@ public:
     [[nodiscard]] virtual std::shared_ptr<DrawableObject> clone() const = 0;
     [[nodiscard]] virtual QPointF get_end() const = 0;
 	[[nodiscard]] virtual bool contains_point(QPointF pos, int thickness) const = 0;
+
+    virtual QJsonObject toJson() const;
+    static std::shared_ptr<DrawableObject> fromJson(const QString id, const ObjType type, const QJsonObject& json);
+
+    virtual QByteArray toBin() const = 0;
+    static std::shared_ptr<DrawableObject> fromBin(QDataStream& stream, ObjType type);
+
+    virtual DrawableObjectData toDrawableObjectData() const;
+    static std::shared_ptr<DrawableObject> fromDrawableObjectData(const DrawableObjectData& data);
+
 };
 
 class DrawableLine : public DrawableObject {
     QPointF start, end;
 
 public:
-    DrawableLine(int id_, QPointF s, QPointF e, int thickness_ = 3, QColor color_ = Qt::black)
+    DrawableLine(QString id_, QPointF s, QPointF e, int thickness_ = 3, QColor color_ = Qt::black)
         : DrawableObject(id_, thickness_, std::move(color_)), start(s), end(e) {}
 
     [[nodiscard]] QPointF get_start() const { return start; }
@@ -53,14 +68,23 @@ public:
     void move_by(QPointF delta) override;
     [[nodiscard]] std::shared_ptr<DrawableObject> clone() const override;
 	[[nodiscard]] bool contains_point(QPointF pos, int thickness) const override;
+
+    QJsonObject toJson() const override;
+    static std::shared_ptr<DrawableObject> fromJson(const QString id, const QJsonObject& json);
+
+    QByteArray toBin() const ;
+    static std::shared_ptr<DrawableObject> fromBin(QDataStream& stream);
+
+    DrawableObjectData toDrawableObjectData() const override;
+    static std::shared_ptr<DrawableObject> fromDrawableObjectData(const DrawableObjectData& data);
 };
 
 class DrawableBrokenLine : public DrawableObject {
-    std::vector<QPointF> points;
+    QVector<QPointF> points;
     QPainterPath path;
 
 public:
-    DrawableBrokenLine(int id_, const std::vector<QPointF>& points_, int thickness_ = 3, QColor color_ = Qt::black);
+    DrawableBrokenLine(QString id_, const QVector<QPointF>& points_, int thickness_ = 3, QColor color_ = Qt::black);
 
     [[nodiscard]] QPointF get_end() const override { return points.back(); }
 
@@ -69,6 +93,14 @@ public:
     [[nodiscard]] std::shared_ptr<DrawableObject> clone() const override;
 	[[nodiscard]] bool contains_point(QPointF pos, int thickness) const override;
 
+    QJsonObject toJson() const override;
+    static std::shared_ptr<DrawableObject> fromJson(const QString id, const QJsonObject& json);
+
+    QByteArray toBin() const override;
+    static std::shared_ptr<DrawableObject> fromBin(QDataStream& stream);
+
+    DrawableObjectData toDrawableObjectData() const override;
+    static std::shared_ptr<DrawableObject> fromDrawableObjectData(const DrawableObjectData& data);
 private:
     void rebuild_path();
 };
@@ -77,7 +109,7 @@ class DrawableRectangle : public DrawableObject {
     QPointF start, end;
 
 public:
-    DrawableRectangle(int id_, QPointF s, QPointF e, int thickness_ = 3, QColor color_ = Qt::black, const QBrush& fill_ = Qt::NoBrush)
+    DrawableRectangle(QString id_, QPointF s, QPointF e, int thickness_ = 3, QColor color_ = Qt::black, const QBrush& fill_ = Qt::NoBrush)
         : DrawableObject(id_, thickness_, std::move(color_), fill_), start(s), end(e) {}
 
     [[nodiscard]] QPointF get_end() const override { return end; }
@@ -86,13 +118,34 @@ public:
     void move_by(QPointF delta) override;
     [[nodiscard]] std::shared_ptr<DrawableObject> clone() const override;
 	[[nodiscard]] bool contains_point(QPointF pos, int thickness) const override;
+
+    QJsonObject toJson() const override;
+    static std::shared_ptr<DrawableObject> fromJson(const QString id, const QJsonObject& json);
+
+    QByteArray toBin() const override;
+    static std::shared_ptr<DrawableObject> fromBin(QDataStream& stream);
+
+    DrawableObjectData toDrawableObjectData() const override;
+    static std::shared_ptr<DrawableObject> fromDrawableObjectData(const DrawableObjectData& data);
 };
 
 class DrawableAssistCircle : public DrawableObject {
 	QPointF center;
 
+    QJsonObject toJson() const override {
+        return DrawableObject::toJson();
+    }
+
+    QByteArray toBin() const override {
+        return QByteArray("lol");
+    }
+
+    DrawableObjectData toDrawableObjectData() const override {
+        return DrawableObjectData();
+    }
+
 public:
-	DrawableAssistCircle(int id_, QPointF center_, int thickness_, QColor color_ = Qt::black)
+	DrawableAssistCircle(QString id_, QPointF center_, int thickness_, QColor color_ = Qt::black)
 		: DrawableObject(id_, thickness_, std::move(color_)), center(center_) {}
 
 	void draw(QPainter& painter) const override {
@@ -116,5 +169,6 @@ public:
 
 	[[nodiscard]] double get_radius() const { return thickness; }
 	[[nodiscard]] QPointF get_center() const { return center; }
+    
 };
 
