@@ -1,4 +1,4 @@
-﻿#include <QJsonObject>
+#include <QJsonObject>
 
 #include <io/Delta_CRDT/CRDT.h>
 #include <Shared/Shared.h>
@@ -112,5 +112,18 @@ QJsonObject DeltaCRDT::generateDelta(const QString operation, const DrawableObje
 	return delta;
 }
 
-void DeltaCRDT::updateDrawableObjs(){}
+void DeltaCRDT::updateDrawableObjs()
+{
+    QMutexLocker locker(&m_mutex);
+    emit objectsUpdated(m_objects);
+}
+
+void DeltaCRDT::clear()
+{
+    QMutexLocker locker(&m_mutex);
+    m_objects.clear();
+    m_idToIndex.clear();
+    emit allObjectsDeleted();
+    emit objectsUpdated(m_objects);
+}
 

@@ -1,8 +1,12 @@
- cmake-build-debug/
+cmake-build-debug/
 .idea/
-./out
-
+out
 CMakePresets.json
 CmakeUserPresets.json
-/.vs
-/out/build/debug
+.vs
+.vscode/
+frontend/build/
+backend/.venv/
+**/__pycache__/
+backend/build/
+/build/

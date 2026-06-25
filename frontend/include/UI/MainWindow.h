@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QColor>
@@ -43,7 +43,13 @@ private:
 
 	QToolButton* setup_file_button();
 	QToolButton* setup_tools_button();
+	QToolButton* setup_session_button();
 	void setup_toolbar();
+
+signals:
+	void createSessionRequested();
+	void joinSessionRequested(const QString& connectionString);
+	void copyLinkRequested();
 };
 
 #endif // MAINWINDOW_H

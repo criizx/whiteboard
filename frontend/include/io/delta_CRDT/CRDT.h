@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QObject>
 #include <QDateTime>
@@ -26,6 +26,8 @@ public:
 	QJsonObject generateDelta(const QString operation, const DrawableObjectData& obj = DrawableObjectData());
 
 	void updateDrawableObjs();
+
+	void clear();
 
     [[nodiscard]] const QVector<DrawableObjectData>& getObjects() const { return m_objects; }
 

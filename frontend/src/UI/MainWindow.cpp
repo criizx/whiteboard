@@ -1,4 +1,4 @@
-﻿#include <QAction>
+#include <QAction>
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMenu>
@@ -6,6 +6,8 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QLineEdit>
 
 #include <DrawingLogic/CanvasWidget.h>
 #include <DrawingLogic/Drawer.h>
@@ -29,6 +31,7 @@ void MainWindow::setup_toolbar() {
 
     toolbar->addWidget(setup_file_button());
     toolbar->addWidget(setup_tools_button());
+    toolbar->addWidget(setup_session_button());
 
     auto* color_action = new QAction("Color", this);
     connect(color_action, &QAction::triggered, this, &MainWindow::choose_color);
@@ -83,6 +86,34 @@ QToolButton* MainWindow::setup_tools_button() {
     tool_button->setMenu(tool_menu);
     return tool_button;
 }
+
+QToolButton* MainWindow::setup_session_button() {
+    auto* session_button = new QToolButton(this);
+    session_button->setText("Session");
+    session_button->setPopupMode(QToolButton::InstantPopup);
+
+    QMenu* session_menu = new QMenu(session_button);
+
+    QAction* create_action = session_menu->addAction("Create New Session");
+    QAction* join_action = session_menu->addAction("Join Session...");
+    QAction* copy_action = session_menu->addAction("Copy Room Link");
+
+    connect(create_action, &QAction::triggered, this, &MainWindow::createSessionRequested);
+    connect(join_action, &QAction::triggered, this, [this]() {
+        bool ok;
+        QString text = QInputDialog::getText(this, "Join Session",
+                                             "Enter Room Link or Code (e.g. ws://localhost:8080/room-id):",
+                                             QLineEdit::Normal, "", &ok);
+        if (ok && !text.trimmed().isEmpty()) {
+            emit joinSessionRequested(text.trimmed());
+        }
+    });
+    connect(copy_action, &QAction::triggered, this, &MainWindow::copyLinkRequested);
+
+    session_button->setMenu(session_menu);
+    return session_button;
+}
+
 
 void MainWindow::save_as() {
     QString filename = QFileDialog::getSaveFileName(

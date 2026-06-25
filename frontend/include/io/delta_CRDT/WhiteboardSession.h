@@ -1,7 +1,9 @@
-﻿#pragma once
+#pragma once
 #include <QObject>
+#include <QUrl>
 
 #include <io/Delta_CRDT/CRDT.h>
+#include <io/Network/NetworkTransport.h>
 
 
 class WhiteboardSession : public QObject {
@@ -10,6 +12,13 @@ class WhiteboardSession : public QObject {
 public:
 	explicit WhiteboardSession(QObject* parent = nullptr);
 
+    void connectToServer(const QUrl& serverUrl,
+                         const QString& roomId,
+                         const QString& clientId);
+
+    void disconnectFromServer();
+
+    [[nodiscard]] bool isOnline() const;
 
 public slots:
 
@@ -24,10 +33,14 @@ signals:
 	void deltaApplied(const QJsonObject& delta);
 	void objectsUpdated(const QVector<DrawableObjectData>& objects);
 
+    void networkConnected();
+    void networkDisconnected();
+    void networkError(const QString& message);
 
 private:
-	DeltaCRDT m_crdt;
-	int m_localCounter = 0;
+	DeltaCRDT          m_crdt;
+    NetworkTransport   m_transport;
+	int                m_localCounter = 0;
 
 	void broadcastDelta(const QJsonObject& delta);
 };
