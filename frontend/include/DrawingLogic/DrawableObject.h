@@ -72,7 +72,7 @@ public:
     QJsonObject toJson() const override;
     static std::shared_ptr<DrawableObject> fromJson(const QString id, const QJsonObject& json);
 
-    QByteArray toBin() const ;
+    QByteArray toBin() const override;
     static std::shared_ptr<DrawableObject> fromBin(QDataStream& stream);
 
     DrawableObjectData toDrawableObjectData() const override;
@@ -90,6 +90,7 @@ public:
 
     void draw(QPainter& painter) const override;
     void move_by(QPointF delta) override;
+    void append_point(const QPointF& point);
     [[nodiscard]] std::shared_ptr<DrawableObject> clone() const override;
 	[[nodiscard]] bool contains_point(QPointF pos, int thickness) const override;
 
@@ -171,4 +172,3 @@ public:
 	[[nodiscard]] QPointF get_center() const { return center; }
     
 };
-

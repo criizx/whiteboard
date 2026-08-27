@@ -26,7 +26,9 @@ public:
 		return m_userId;
 	}
 	void addObject(std::shared_ptr<DrawableObject> obj);
-	bool remove_object(const std::shared_ptr<DrawableObject>& object);
+	bool remove_object(std::shared_ptr<DrawableObject> object);
+	void notify_object_modified(const std::shared_ptr<DrawableObject>& object);
+	[[nodiscard]] qreal scale() const { return m_scale; }
 
 protected:
 	void paintEvent(QPaintEvent*) override;
@@ -53,6 +55,8 @@ private:
 	qreal m_scale = 1.0;
 	QPoint m_last_pan_pos;
 	bool m_panning = false;
+	bool m_grid_visible = true;
+	Qt::CursorShape m_idle_cursor = Qt::CrossCursor;
 
 	void create_drawer_by_name(const QString& name);
 
@@ -61,6 +65,7 @@ signals:
 	void objectDeleted(std::shared_ptr<DrawableObject> obj);
 	void objectModified(std::shared_ptr<DrawableObject> obj);
 	void allObjectsDeleted();
+	void viewChanged(qreal scale);
 
 public:
 	QString generate_id();
@@ -69,6 +74,11 @@ public:
 	void set_pen_thickness(int value);
 	void set_tool(const QString& name);
 	void clear_all();
+	void reset_view();
+	void zoom_in();
+	void zoom_out();
+	void set_grid_visible(bool visible);
+	void set_idle_cursor(Qt::CursorShape shape);
 
 	[[nodiscard]] QPointF to_world(const QPointF& screen_pos) const;
 	[[nodiscard]] QPointF to_screen(const QPointF& world_pos) const;

@@ -96,4 +96,5 @@ class MoveTool final : public Drawer {
 private:
 	std::shared_ptr<DrawableObject> selected;
 	QPointF last_pos;
+	bool moved = false;
 };

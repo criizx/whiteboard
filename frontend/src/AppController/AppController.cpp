@@ -34,7 +34,7 @@ AppController::~AppController()
 void AppController::start()
 {
     if (m_mainWindow) {
-        m_mainWindow->showFullScreen();
+        m_mainWindow->showMaximized();
     }
 }
 
@@ -45,6 +45,7 @@ void AppController::connectToServer(const QUrl& serverUrl, const QString& roomId
     m_roomId = room;
     qDebug() << "[AppController] Connecting to server:" << serverUrl << "room:" << room;
     m_session->disconnectFromServer();
+    m_mainWindow->set_connection_status("Connecting…", false);
     m_session->connectToServer(serverUrl, room, m_clientId);
 }
 
@@ -68,6 +69,14 @@ void AppController::setupConnections()
             this, &AppController::onNetworkDisconnected);
     connect(m_session, &WhiteboardSession::networkError,
             this, &AppController::onNetworkError);
+    connect(m_session, &WhiteboardSession::peerCountChanged, this, [this](int count) {
+        if (count > 0) {
+            m_mainWindow->set_connection_status(
+                QString("Direct · %1 peer%2").arg(count).arg(count == 1 ? "" : "s"), true);
+        } else if (m_session->isOnline()) {
+            m_mainWindow->set_connection_status("Connected", true);
+        }
+    });
 
     connect(m_mainWindow.get(), &MainWindow::createSessionRequested,
             this, &AppController::onCreateSessionRequested);
@@ -127,21 +136,25 @@ void AppController::onRemoteObjectsUpdated(const QVector<DrawableObjectData>& ob
 
     m_canvasWidget->blockSignals(false);
     m_canvasWidget->update();
+    m_mainWindow->update_object_count();
 }
 
 void AppController::onNetworkConnected()
 {
     qDebug() << "[AppController] Network connected";
+    m_mainWindow->set_connection_status("Connected", true);
 }
 
 void AppController::onNetworkDisconnected()
 {
     qDebug() << "[AppController] Network disconnected";
+    m_mainWindow->set_connection_status("Offline", false);
 }
 
 void AppController::onNetworkError(const QString& message)
 {
     qWarning() << "[AppController] Network error:" << message;
+    m_mainWindow->set_connection_status("Connection error", false);
 }
 
 void AppController::onCreateSessionRequested()

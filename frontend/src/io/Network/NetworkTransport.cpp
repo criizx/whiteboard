@@ -2,22 +2,38 @@
 #include <QDebug>
 
 #include <io/Network/NetworkTransport.h>
+#include <io/Network/PeerTransport.h>
 
 static constexpr int RECONNECT_INTERVAL_MS = 3000;
 
 NetworkTransport::NetworkTransport(QObject* parent)
-    : QObject(parent)
+    : QObject(parent), m_peerTransport(new PeerTransport(this))
 {
     connect(&m_socket, &QWebSocket::connected,    this, &NetworkTransport::onConnected);
     connect(&m_socket, &QWebSocket::disconnected, this, &NetworkTransport::onDisconnected);
     connect(&m_socket, &QWebSocket::textMessageReceived,
             this, &NetworkTransport::onTextMessageReceived);
-    connect(&m_socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
+    connect(&m_socket, &QWebSocket::errorOccurred,
             this, &NetworkTransport::onError);
 
     m_reconnectTimer.setInterval(RECONNECT_INTERVAL_MS);
     m_reconnectTimer.setSingleShot(false);
     connect(&m_reconnectTimer, &QTimer::timeout, this, &NetworkTransport::onReconnectTimer);
+    connect(m_peerTransport, &PeerTransport::signalToSend, this, [this](const QJsonObject& message) {
+        if (isConnected()) {
+            m_socket.sendTextMessage(QString::fromUtf8(
+                QJsonDocument(message).toJson(QJsonDocument::Compact)));
+        }
+    });
+    connect(m_peerTransport, &PeerTransport::deltaReceived,
+            this, &NetworkTransport::deltaReceived);
+    connect(m_peerTransport, &PeerTransport::snapshotRequested,
+            this, &NetworkTransport::snapshotRequested);
+    connect(m_peerTransport, &PeerTransport::peerCountChanged,
+            this, &NetworkTransport::peerCountChanged);
+    connect(m_peerTransport, &PeerTransport::peerCountChanged, this, [](int count) {
+        qDebug() << "[PeerTransport] Direct peers:" << count;
+    });
 }
 
 void NetworkTransport::connectToServer(const QUrl& serverUrl,
@@ -28,6 +44,7 @@ void NetworkTransport::connectToServer(const QUrl& serverUrl,
     m_roomId     = roomId;
     m_clientId   = clientId;
     m_intentionalDisconnect = false;
+    m_peerTransport->reset();
 
     qDebug() << "[NetworkTransport] Connecting to" << serverUrl;
     m_socket.open(serverUrl);
@@ -37,6 +54,7 @@ void NetworkTransport::disconnectFromServer()
 {
     m_intentionalDisconnect = true;
     m_reconnectTimer.stop();
+    m_peerTransport->reset();
     m_socket.close();
 }
 
@@ -47,6 +65,8 @@ bool NetworkTransport::isConnected() const
 
 void NetworkTransport::sendDelta(const QJsonObject& delta)
 {
+    if (m_peerTransport->broadcastDelta(delta) > 0) return;
+
     if (!isConnected()) {
         qWarning() << "[NetworkTransport] Cannot send delta: not connected";
         return;
@@ -117,9 +137,22 @@ void NetworkTransport::onTextMessageReceived(const QString& message)
             }
         }
 
+    } else if (type == "peers") {
+        m_peerTransport->connectToPeers(frame["payload"].toArray());
+    } else if (type == "peer-left") {
+        m_peerTransport->removePeer(frame["clientId"].toString());
+    } else if (type == "peer-joined") {
+        return;
+    } else if (type == "offer" || type == "answer" || type == "candidate") {
+        m_peerTransport->handleSignal(frame);
     } else {
         qDebug() << "[NetworkTransport] Unhandled frame type:" << type;
     }
+}
+
+void NetworkTransport::sendSnapshot(const QString& peerId, const QJsonArray& snapshot)
+{
+    m_peerTransport->sendSnapshot(peerId, snapshot);
 }
 
 void NetworkTransport::onError(QAbstractSocket::SocketError /*error*/)

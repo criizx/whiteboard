@@ -2,7 +2,7 @@
 #include <QObject>
 #include <QUrl>
 
-#include <io/Delta_CRDT/CRDT.h>
+#include <io/delta_CRDT/CRDT.h>
 #include <io/Network/NetworkTransport.h>
 
 
@@ -28,6 +28,7 @@ public slots:
 	void onLocalDeleteAll();
 
 	void onNetworkDelta(const QJsonObject& delta);
+	void onSnapshotRequested(const QString& peerId);
 
 signals:
 	void deltaApplied(const QJsonObject& delta);
@@ -36,6 +37,7 @@ signals:
     void networkConnected();
     void networkDisconnected();
     void networkError(const QString& message);
+    void peerCountChanged(int count);
 
 private:
 	DeltaCRDT          m_crdt;

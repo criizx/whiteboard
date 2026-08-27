@@ -5,7 +5,7 @@
 #include <QUrl>
 
 #include <DrawingLogic/CanvasWidget.h>
-#include <io/Delta_CRDT/WhiteboardSession.h>
+#include <io/delta_CRDT/WhiteboardSession.h>
 #include <Shared/Shared.h>
 #include <UI/MainWindow.h>
 

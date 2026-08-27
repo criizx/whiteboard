@@ -90,9 +90,24 @@ DrawableBrokenLine::DrawableBrokenLine(QString id_, const QVector<QPointF>& poin
 
 void DrawableBrokenLine::draw(QPainter& painter) const {
 	QPen pen(color, thickness);
+	pen.setCapStyle(Qt::RoundCap);
+	pen.setJoinStyle(Qt::RoundJoin);
 	painter.setPen(pen);
 	painter.setBrush(Qt::NoBrush);
-	painter.drawPath(path);
+	if (points.size() == 1) {
+		painter.drawPoint(points.front());
+	} else {
+		painter.drawPath(path);
+	}
+}
+
+void DrawableBrokenLine::append_point(const QPointF& point) {
+	if (points.empty()) {
+		path.moveTo(point);
+	} else {
+		path.lineTo(point);
+	}
+	points.push_back(point);
 }
 
 void DrawableBrokenLine::move_by(QPointF delta) {
@@ -108,11 +123,11 @@ std::shared_ptr<DrawableObject> DrawableBrokenLine::clone() const {
 
 void DrawableBrokenLine::rebuild_path() {
 	path = QPainterPath();
-	if (!points.empty()) {
-		path.moveTo(points[0]);
-		for (size_t i = 1; i < points.size(); ++i) {
-			path.lineTo(points[i]);
-		}
+	if (points.empty()) return;
+
+	path.moveTo(points.front());
+	for (qsizetype i = 1; i < points.size(); ++i) {
+		path.lineTo(points[i]);
 	}
 }
 

@@ -1,5 +1,6 @@
-#include <io/Delta_CRDT/WhiteboardSession.h>
+#include <io/delta_CRDT/WhiteboardSession.h>
 #include <Shared/Shared.h>
+#include <QJsonArray>
 
 WhiteboardSession::WhiteboardSession(QObject* parent)
     : QObject(parent)
@@ -16,6 +17,10 @@ WhiteboardSession::WhiteboardSession(QObject* parent)
             this,         &WhiteboardSession::networkDisconnected);
     connect(&m_transport, &NetworkTransport::errorOccurred,
             this,         &WhiteboardSession::networkError);
+    connect(&m_transport, &NetworkTransport::snapshotRequested,
+            this,         &WhiteboardSession::onSnapshotRequested);
+    connect(&m_transport, &NetworkTransport::peerCountChanged,
+            this,         &WhiteboardSession::peerCountChanged);
 }
 
 void WhiteboardSession::connectToServer(const QUrl&    serverUrl,
@@ -70,6 +75,15 @@ void WhiteboardSession::onNetworkDelta(const QJsonObject& delta)
 
     emit deltaApplied(delta);
     emit objectsUpdated(m_crdt.getObjects());
+}
+
+void WhiteboardSession::onSnapshotRequested(const QString& peerId)
+{
+    QJsonArray snapshot;
+    for (const auto& object : m_crdt.getObjects()) {
+        snapshot.append(m_crdt.generateDelta("create", object));
+    }
+    m_transport.sendSnapshot(peerId, snapshot);
 }
 
 void WhiteboardSession::broadcastDelta(const QJsonObject& delta)

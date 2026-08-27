@@ -2,11 +2,14 @@
 
 #include <QObject>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QString>
 #include <QTimer>
 
 #include <QtWebSockets/QWebSocket>
+
+class PeerTransport;
 
 class NetworkTransport : public QObject {
     Q_OBJECT
@@ -18,12 +21,15 @@ public:
     void disconnectFromServer();
 
     [[nodiscard]] bool isConnected() const;
+    void sendSnapshot(const QString& peerId, const QJsonArray& snapshot);
 
 public slots:
     void sendDelta(const QJsonObject& delta);
 
 signals:
     void deltaReceived(const QJsonObject& delta);
+    void snapshotRequested(const QString& peerId);
+    void peerCountChanged(int count);
 
     void connected();
     void disconnected();
@@ -39,6 +45,7 @@ private slots:
 private:
     QWebSocket  m_socket;
     QTimer      m_reconnectTimer;
+    PeerTransport* m_peerTransport;
 
     QUrl    m_serverUrl;
     QString m_roomId;

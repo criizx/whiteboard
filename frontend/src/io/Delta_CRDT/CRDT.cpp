@@ -1,6 +1,6 @@
 #include <QJsonObject>
 
-#include <io/Delta_CRDT/CRDT.h>
+#include <io/delta_CRDT/CRDT.h>
 #include <Shared/Shared.h>
 
 /*Delta
@@ -126,4 +126,3 @@ void DeltaCRDT::clear()
     emit allObjectsDeleted();
     emit objectsUpdated(m_objects);
 }
-

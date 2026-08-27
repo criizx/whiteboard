@@ -1,5 +1,6 @@
 ﻿#include <ranges>
 #include <utility>
+#include <QLineF>
 
 #include <DrawingLogic/CanvasWidget.h>
 #include <DrawingLogic/DrawableObject.h>
@@ -9,20 +10,26 @@ void BrokenLineDrawer::on_mouse_press(CanvasWidget* canvas, const QPointF pos) {
     m_points.clear();
     m_points.push_back(pos);
     m_drawing = true;
+	preview_path = std::make_shared<DrawableBrokenLine>("__preview__", m_points, thickness, color);
+	canvas->setPreview(canvas->getUserId(), preview_path);
 }
 
 void BrokenLineDrawer::on_mouse_move(CanvasWidget* canvas, const QPointF pos) {
 	if (!m_drawing) {return;}
-	m_points.push_back(pos);
-	preview_path = std::make_shared<DrawableBrokenLine>("__preview__", m_points, thickness, color);
 
-	canvas->setPreview(canvas->getUserId(), preview_path);
+	const qreal minimum_distance = 2.0 / canvas->scale();
+	if (QLineF(m_points.back(), pos).length() < minimum_distance) return;
+
+	m_points.push_back(pos);
+	preview_path->append_point(pos);
 }
 
 
 void BrokenLineDrawer::on_mouse_release(CanvasWidget* canvas, const QPointF pos) {
 	if (!m_drawing) {return;}
-	m_points.push_back(pos);
+	if (QLineF(m_points.back(), pos).length() > 0.25 / canvas->scale()) {
+		m_points.push_back(pos);
+	}
 
 	QString id = canvas->generate_id();
 
@@ -122,7 +129,6 @@ void EraserTool::on_mouse_move(CanvasWidget* canvas, QPointF pos) {
 void EraserTool::on_mouse_release(CanvasWidget* canvas, QPointF) {
 	is_erasing = false;
 
-	auto& objs = canvas->objects();
 	canvas->clearToolPreview();
 
 	canvas->update();
@@ -132,14 +138,16 @@ void EraserTool::on_mouse_release(CanvasWidget* canvas, QPointF) {
 void EraserTool::erase_at(CanvasWidget* canvas, QPointF pos, int brush_thickness) {
 	auto& objs = canvas->objects();
 
-	for (int i = objs.size() - 1; i >= 0; --i) {
-		if (objs[i]->contains_point(pos, brush_thickness)) {
-			canvas->remove_object(objs[i]);
+	for (std::size_t i = objs.size(); i > 0; --i) {
+		auto object = objs[i - 1];
+		if (object->contains_point(pos, brush_thickness)) {
+			canvas->remove_object(std::move(object));
 		}
 	}
 }
 
 void MoveTool::on_mouse_press(CanvasWidget* canvas, QPointF pos) {
+	moved = false;
 	for (const auto& obj : std::ranges::reverse_view(canvas->objects())) {
 		if (obj->contains_point(pos, thickness)) {
 			selected = obj;
@@ -155,9 +163,14 @@ void MoveTool::on_mouse_move(CanvasWidget*, QPointF pos) {
 		QPointF delta = pos - last_pos;
 		selected->move_by(delta);
 		last_pos = pos;
+		moved = true;
 	}
 }
 
-void MoveTool::on_mouse_release(CanvasWidget*, QPointF) {
+void MoveTool::on_mouse_release(CanvasWidget* canvas, QPointF) {
+	if (selected && moved) {
+		canvas->notify_object_modified(selected);
+	}
 	selected.reset();
+	moved = false;
 }
